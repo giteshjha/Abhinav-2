@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #5A5A40;
+  --color-secondary: #f5f5f0;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --animate-spin-slow: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@layer base {
+  body {
+    @apply bg-secondary text-primary font-sans relative;
+    background-image: linear-gradient(rgba(245, 245, 240, 0.85), rgba(245, 245, 240, 0.85)), url('https://picsum.photos/seed/wisdom/1920/1080');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-primary text-white rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .glass-panel {
+    @apply bg-white/40 backdrop-blur-xl border border-white/20 shadow-sm rounded-2xl;
+  }
+
+  .chat-bubble-user {
+    @apply bg-primary text-secondary rounded-2xl rounded-tr-none px-4 py-3 max-w-[80%];
+  }
+
+  .chat-bubble-ai {
+    @apply bg-white/60 backdrop-blur-md text-primary rounded-2xl rounded-tl-none px-4 py-3 shadow-sm border border-white/20 max-w-[80%];
+  }
+}
+
+.markdown-body {
+  @apply text-sm leading-relaxed;
+}
+
+.markdown-body p {
+  @apply mb-2;
+}
+
+.markdown-body ul, .markdown-body ol {
+  @apply mb-2 ml-4 list-disc;
+}
