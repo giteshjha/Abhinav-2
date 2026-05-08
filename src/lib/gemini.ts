@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ImageGenerationConfig, VideoGenerationConfig } from "../types";
 
-export const chatModel = "gemini-3-flash-preview";
+export const chatModel = "gemma-2-9b-it";
 export const imageModel = "gemini-2.5-flash-image";
 export const videoModel = "veo-3.1-lite-generate-preview";
 
@@ -9,9 +9,15 @@ export const systemInstruction = "You are Modern Prince, a polite, helpful, and 
 
 // Functional helper to get fresh AI instance (needed for some models with dynamic keys)
 function getAI(customKey?: string) {
-  const apiKey = customKey || process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // Directly use process.env so that Vite's 'define' can replace them at build time
+  const apiKey = customKey || 
+                 process.env.API_KEY || 
+                 process.env.GEMINI_API_KEY || 
+                 process.env.GEMMA_API_KEY ||
+                 (import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+
   if (!apiKey) {
-    throw new Error("No API Key found. Please ensure GEMINI_API_KEY is set in secrets or an API key is selected.");
+    throw new Error("No API Key found. If running locally, check .env. If deployed, set the environment variable. In AI Studio, ensure a key is selected.");
   }
   return new GoogleGenAI({ apiKey });
 }
@@ -113,7 +119,9 @@ export async function generateVideo(config: VideoGenerationConfig) {
   const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
   if (!downloadLink) return null;
 
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY as string;
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("API Key missing for video download auth");
+
   const videoResponse = await fetch(downloadLink, {
     method: 'GET',
     headers: {

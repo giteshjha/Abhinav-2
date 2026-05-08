@@ -9,6 +9,7 @@ export default function ImageView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<ImageGenerationConfig['aspectRatio']>('1:1');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
@@ -39,11 +40,15 @@ export default function ImageView() {
   const handleEnhance = async () => {
     if (!prompt.trim() || isEnhancing) return;
     setIsEnhancing(true);
+    setError(null);
     try {
       const enhanced = await enhancePrompt(prompt);
       if (enhanced) setPrompt(enhanced.trim());
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message?.includes('No API Key') 
+        ? "API Key missing. Please check your settings." 
+        : "Failed to enhance prompt.");
     } finally {
       setIsEnhancing(false);
     }
@@ -53,6 +58,7 @@ export default function ImageView() {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
+    setError(null);
     try {
       const stylePrompt = styles.find(s => s.name === selectedStyle)?.prompt;
       const finalPrompt = stylePrompt ? `${prompt}, ${stylePrompt}` : prompt;
@@ -69,8 +75,11 @@ export default function ImageView() {
         setResultImage(imageUrl);
         setHistory(prev => [imageUrl, ...prev].slice(0, 10));
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message?.includes('No API Key') 
+        ? "API Key missing. Please ensure GEMINI_API_KEY is set in your environment (e.g. Vercel dashboard)." 
+        : "Something went wrong. Please check your connection and try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -81,6 +90,7 @@ export default function ImageView() {
     setResultImage(null);
     setSourceImage(null);
     setSelectedStyle(null);
+    setError(null);
   };
 
   const examples = [
@@ -243,6 +253,16 @@ export default function ImageView() {
                   </>
                 )}
               </button>
+
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium leading-relaxed"
+                >
+                  {error}
+                </motion.div>
+              )}
             </div>
           </div>
 

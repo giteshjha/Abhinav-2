@@ -53,12 +53,16 @@ export default function ChatView() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const errorMessage = error?.message?.includes('No API Key found') 
+        ? "I cannot assist you because the API Key is missing. Please select an API key in the AI Studio settings."
+        : "I'm very sorry, but something went wrong. Please check your connection and try again.";
+      
       setMessages(prev => [...prev, {
         id: 'error',
         role: 'assistant',
-        content: "I'm very sorry, but something went wrong. Please check your connection and try again."
+        content: errorMessage
       }]);
     } finally {
       setIsLoading(false);

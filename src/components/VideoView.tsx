@@ -56,11 +56,13 @@ export default function VideoView() {
       if (error.message === "PERMISSION_REQUIRED") {
         if (window.aistudio) {
           await window.aistudio.openSelectKey();
-          // Prompt user to try again after selecting key
           alert("Please try your generation again now that you have selected a key.");
         }
       } else {
-        alert("I apologize, but I encountered an error during generation. Please try again.");
+        const msg = error.message?.includes('No API Key') 
+          ? "API Key missing. Please ensure GEMINI_API_KEY is set in your environment (e.g. Vercel dashboard)." 
+          : "I apologize, but I encountered an error during generation. Please try again.";
+        alert(msg);
       }
     } finally {
       clearInterval(stepInterval);
