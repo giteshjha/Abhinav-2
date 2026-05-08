@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ImageGenerationConfig, VideoGenerationConfig } from "../types";
 
-export const chatModel = "gemma-2-9b-it";
+export const chatModel = "gemini-1.5-flash";
 export const imageModel = "gemini-2.5-flash-image";
 export const videoModel = "veo-3.1-lite-generate-preview";
 
