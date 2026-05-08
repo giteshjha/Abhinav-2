@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { ImageGenerationConfig, VideoGenerationConfig } from "../types";
 
-export const chatModel = "gemini-1.5-flash";
+export const chatModel = "gemini-1.5-flash-8b";
 export const imageModel = "gemini-2.5-flash-image";
 export const videoModel = "veo-3.1-lite-generate-preview";
 
@@ -9,15 +9,15 @@ export const systemInstruction = "You are Modern Prince, a polite, helpful, and 
 
 // Functional helper to get fresh AI instance (needed for some models with dynamic keys)
 function getAI(customKey?: string) {
-  // Directly use process.env so that Vite's 'define' can replace them at build time
+  // Enhanced key detection for different environments (AI Studio, Vercel, Local)
   const apiKey = customKey || 
-                 process.env.API_KEY || 
                  process.env.GEMINI_API_KEY || 
+                 process.env.API_KEY || 
                  process.env.GEMMA_API_KEY ||
-                 (import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : undefined);
+                 (typeof window !== 'undefined' && (window as any).VITE_GEMINI_API_KEY);
 
   if (!apiKey) {
-    throw new Error("No API Key found. If running locally, check .env. If deployed, set the environment variable. In AI Studio, ensure a key is selected.");
+    throw new Error("No API Key found. Please ensure GEMINI_API_KEY is set in your environment (e.g. Vercel dashboard).");
   }
   return new GoogleGenAI({ apiKey });
 }
