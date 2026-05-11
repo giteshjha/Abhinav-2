@@ -11,6 +11,7 @@ export default defineConfig(({mode}) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY),
       'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY || env.VITE_API_KEY),
       'process.env.GEMMA_API_KEY': JSON.stringify(env.GEMMA_API_KEY || process.env.GEMMA_API_KEY || env.VITE_GEMMA_API_KEY),
+      'process.env.GEMINI_CHAT_MODEL': JSON.stringify(env.GEMINI_CHAT_MODEL || process.env.GEMINI_CHAT_MODEL || env.VITE_GEMINI_CHAT_MODEL),
     },
     resolve: {
       alias: {

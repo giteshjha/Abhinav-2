@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { Image as ImageIcon, Sparkles, Download, Upload, Loader2, X, RefreshCw, Wand2, History, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateImage, enhancePrompt } from '../lib/gemini';
+import { chatModel, generateImage, enhancePrompt, imageModel } from '../lib/gemini';
 import { ImageGenerationConfig } from '../types';
 
 export default function ImageView() {
   const [prompt, setPrompt] = useState('');
+  const [promptPreparedByModel, setPromptPreparedByModel] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -43,7 +44,10 @@ export default function ImageView() {
     setError(null);
     try {
       const enhanced = await enhancePrompt(prompt);
-      if (enhanced) setPrompt(enhanced.trim());
+      if (enhanced) {
+        setPrompt(enhanced.trim());
+        setPromptPreparedByModel(true);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message?.includes('No API Key') 
@@ -67,7 +71,8 @@ export default function ImageView() {
         prompt: finalPrompt,
         aspectRatio,
         imageSize: '1K',
-        sourceImageUrl: sourceImage || undefined
+        sourceImageUrl: sourceImage || undefined,
+        skipPromptPreparation: promptPreparedByModel,
       };
       
       const imageUrl = await generateImage(config);
@@ -87,6 +92,7 @@ export default function ImageView() {
 
   const clear = () => {
     setPrompt('');
+    setPromptPreparedByModel(false);
     setResultImage(null);
     setSourceImage(null);
     setSelectedStyle(null);
@@ -106,7 +112,7 @@ export default function ImageView() {
       <header className="px-8 py-6 flex items-center justify-between border-b border-primary/5 bg-white/40 backdrop-blur-md sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold text-primary">Royal Image Forge</h1>
-          <p className="text-sm text-primary/40">Develop high-fidelity visual concepts for your kingdom</p>
+          <p className="text-sm text-primary/40">Prompts refined with {chatModel}, rendered with {imageModel}</p>
         </div>
         <div className="flex items-center gap-4">
           <button 
@@ -167,7 +173,10 @@ export default function ImageView() {
                 <div className="relative">
                   <textarea
                     value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
+                    onChange={(e) => {
+                      setPrompt(e.target.value);
+                      setPromptPreparedByModel(false);
+                    }}
                     placeholder="Describe the image you wish to see..."
                     className="w-full min-h-[140px] bg-white/20 backdrop-blur-md rounded-2xl p-4 outline-none border border-primary/5 focus:border-primary/20 transition-all resize-none text-sm leading-relaxed"
                   />
@@ -177,7 +186,10 @@ export default function ImageView() {
                   {examples.map((ex, i) => (
                     <button 
                       key={i} 
-                      onClick={() => setPrompt(ex)}
+                      onClick={() => {
+                        setPrompt(ex);
+                        setPromptPreparedByModel(false);
+                      }}
                       className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-primary/5 text-primary/60 hover:bg-primary/10 transition-colors"
                     >
                       {ex}

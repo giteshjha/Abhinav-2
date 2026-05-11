@@ -1,7 +1,24 @@
 import { GoogleGenAI } from "@google/genai";
 import { ImageGenerationConfig, VideoGenerationConfig } from "../types";
 
-export const chatModel = "gemini-1.5-flash-8b";
+export const DEFAULT_CHAT_MODEL = "gemma-4-26b-a4b-it";
+export const CHAT_MODEL_FALLBACKS = [
+  "gemma-3-27b-it",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+];
+
+export function buildChatModelCandidates(primaryModel = DEFAULT_CHAT_MODEL) {
+  return Array.from(
+    new Set([primaryModel.trim(), ...CHAT_MODEL_FALLBACKS].filter(Boolean)),
+  );
+}
+
+export const chatModel =
+  process.env.GEMINI_CHAT_MODEL?.trim() || DEFAULT_CHAT_MODEL;
+export const chatModelCandidates = buildChatModelCandidates(chatModel);
 export const imageModel = "gemini-2.5-flash-image";
 export const videoModel = "veo-3.1-lite-generate-preview";
 
@@ -22,34 +39,91 @@ function getAI(customKey?: string) {
   return new GoogleGenAI({ apiKey });
 }
 
+export function shouldRetryWithAlternateModel(error: unknown) {
+  const status = (error as { status?: number })?.status;
+  const message = String((error as { message?: string })?.message || "").toLowerCase();
+
+  if (status === 404 || status === 429) {
+    return true;
+  }
+
+  return (
+    (message.includes("model") &&
+      (message.includes("deprecated") ||
+        message.includes("not found") ||
+        message.includes("not supported") ||
+        message.includes("not available"))) ||
+    message.includes("resource_exhausted") ||
+    message.includes("quota") ||
+    message.includes("rate limit")
+  );
+}
+
+export async function generateTextWithModelFallback(
+  runModel: (model: string) => Promise<string | undefined>,
+  modelCandidates = chatModelCandidates,
+) {
+  let lastError: unknown;
+
+  for (const [index, model] of modelCandidates.entries()) {
+    try {
+      return await runModel(model);
+    } catch (error) {
+      lastError = error;
+
+      if (!shouldRetryWithAlternateModel(error) || index === modelCandidates.length - 1) {
+        throw error;
+      }
+
+      console.warn(`Retrying with alternate Gemini model after ${model} failed.`, error);
+    }
+  }
+
+  throw lastError ?? new Error("Unable to generate a Gemini response.");
+}
+
 export async function generateChatResponse(messages: { role: 'user' | 'model', parts: { text: string }[] }[]) {
   const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: chatModel,
-    contents: messages,
-    config: {
-      systemInstruction,
-    },
+  return generateTextWithModelFallback(async (model) => {
+    const response = await ai.models.generateContent({
+      model,
+      contents: messages,
+      config: {
+        systemInstruction,
+      },
+    });
+
+    return response.text;
   });
-  return response.text;
 }
 
 export async function enhancePrompt(prompt: string) {
   const ai = getAI();
   const instruction = "You are a creative prompt engineer. Transform the following brief idea into a detailed, descriptive artistic prompt for an image generator. Focus on lighting, style, composition, and mood. Keep it under 50 words. Only return the enhanced prompt text, nothing else.";
-  const response = await ai.models.generateContent({
-    model: chatModel,
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    config: { systemInstruction: instruction }
+  return generateTextWithModelFallback(async (model) => {
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { systemInstruction: instruction }
+    });
+
+    return response.text;
   });
-  return response.text;
+}
+
+export async function prepareImagePrompt(prompt: string) {
+  const enhanced = await enhancePrompt(prompt);
+  return enhanced?.trim() || prompt.trim();
 }
 
 export async function generateImage(config: ImageGenerationConfig) {
   const ai = getAI();
+  const preparedPrompt = config.skipPromptPreparation
+    ? config.prompt.trim()
+    : await prepareImagePrompt(config.prompt);
   const contents = {
     parts: [
-      { text: config.prompt },
+      { text: preparedPrompt },
       ...(config.sourceImageUrl ? [{ 
         inlineData: { 
           data: config.sourceImageUrl.split(',')[1], 
